@@ -54,3 +54,6 @@ def loop_publicaciones():
 if __name__ == "__main__":
     t = threading.Thread(target=loop_publicaciones)
     t.start()
+def iniciar bot():
+    t=threading.Thread(target=loop_publicaciones)
+    t.start()
