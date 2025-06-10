@@ -1,59 +1,78 @@
+```python
 import os
-import json
-import threading
 import time
 import requests
-from telegram import Bot
 from dotenv import load_dotenv
+from amazon_paapi import AmazonApi
 
+# ✅ Cargar variables de entorno
 load_dotenv()
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
+SECRET_KEY = os.getenv("AWS_SECRET_KEY")
+PARTNER_TAG = os.getenv("AMAZON_TAG")
+LOCALE = "es"
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")  # Opcional
+# ✅ Instanciar Amazon API
+amazon = AmazonApi(ACCESS_KEY, SECRET_KEY, PARTNER_TAG, LOCALE)
 
-bot = Bot(token=TELEGRAM_TOKEN)
+# ✅ Keywords
+SUPLEMENTOS_KEYWORDS = [
+    "creatina", "proteína", "whey", "glutamina", "bcaa", "preentreno",
+    "quemagrasas", "colágeno", "shaker", "suplemento"
+]
+MATERIAL_KEYWORDS = [
+    "bandas", "rodillo", "kettlebell", "anillas", "cuerda", "trx", "rueda abdominal",
+    "esterilla", "reloj deportivo", "chaleco lastrado", "zapatillas", "ropa deportiva",
+    "leggins", "pesas", "guantes", "cinta de correr", "spinning", "crossfit"
+]
 
-def calcular_descuento(precio_original, precio_actual):
-    try:
-        descuento = round((float(precio_original) - float(precio_actual)) / float(precio_original) * 100)
-        return f"⚡ -{descuento}% de descuento"
-    except:
-        return ""
+# ✅ Clasificación
+def clasificar_producto(nombre):
+    nombre = nombre.lower()
+    for kw in SUPLEMENTOS_KEYWORDS:
+        if kw in nombre:
+            return "suplemento"
+    for kw in MATERIAL_KEYWORDS:
+        if kw in nombre:
+            return "material"
+    return "otro"
 
-def publicar_producto(producto):
-    nombre = producto.get("nombre", "Producto fitness")
-    precio = producto.get("precio_actual", "¿?")
-    estrellas = producto.get("valoracion", "¿?")
-    enlace = producto.get("enlace", "")
-    descuento = calcular_descuento(producto.get("precio_original", precio), precio)
-    beneficio = producto.get("beneficio", "¡Ideal para tus entrenamientos!")
+# ✅ Generador de copy
+def generar_texto(producto):
+    titulo = producto.title or "Producto fitness"
+    precio = producto.prices.price or "Sin precio"
+    rating = f"{producto.reviews.rating}⭐" if producto.reviews else "Sin valoraciones"
+    url = producto.url or ""
 
-    mensaje = f"""🔥 ¡OFERTÓN FITNESS! 🔥
-🏷️ Producto: {nombre}
-⭐ Valoración: {estrellas} | 💰 Precio: {precio}
-{descuento}
-✅ {beneficio}
+    tipo = clasificar_producto(titulo)
 
-🛒 Consíguelo aquí 👉 {enlace}
+    if tipo == "suplemento":
+        hashtags = "#NutriciónDeportiva #SuplementosFitness #GymLife"
+        copy = f"🔥 {titulo}\nPotencia tus entrenos y tu recuperación 💪\n⭐ {rating}\n💰 {precio}\n🔗 {url}\n{hashtags}"
+    elif tipo == "material":
+        hashtags = "#EntrenaConEstilo #FitnessGear #CholloFitness"
+        copy = f"🏋️ {titulo}\nIdeal para tus rutinas diarias 💥\n⭐ {rating}\n💰 {precio}\n🔗 {url}\n{hashtags}"
+    else:
+        copy = f"🛒 {titulo}\n⭐ {rating}\n💰 {precio}\n🔗 {url}\n#CholloFitness"
 
-#Fitness #Amazon #CholloDelDía #EntrenaEnCasa
-"""
-    bot.send_message(chat_id=CHAT_ID, text=mensaje)
+    return copy
 
-def cargar_productos():
-    with open("productos.json", "r", encoding="utf-8") as f:
-        return json.load(f)
+# ✅ Enviar a Telegram
+def enviar_telegram(texto):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    requests.post(url, data={"chat_id": CHAT_ID, "text": texto, "parse_mode": "Markdown"})
 
-def loop_publicaciones():
-    productos = cargar_productos()
-    while True:
-        for producto in productos:
-            publicar_producto(producto)
-            time.sleep(3600)  # Publica cada hora
+# ✅ Lógica principal
+def iniciar_bot():
+    productos = amazon.search_items(keywords="fitness", search_index="All", item_count=10)
+    for item in productos.items:
+        if item.reviews and float(item.reviews.rating) >= 4.0:
+            mensaje = generar_texto(item)
+            enviar_telegram(mensaje)
+            time.sleep(5)
 
 if __name__ == "__main__":
-    t = threading.Thread(target=loop_publicaciones)
-    t.start()
-def iniciar_bot():
-    t=threading.Thread(target=loop_publicaciones)
-    t.start()
+    iniciar_bot()
+```
