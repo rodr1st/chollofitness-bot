@@ -3,3 +3,4 @@ python-dotenv==1.0.1
 Flask==2.3.2
 gunicorn==21.2.0
 requests
+amazon-paapi
