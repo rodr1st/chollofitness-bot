@@ -1,5 +1,5 @@
 python-telegram-bot==21.7
 python-dotenv==1.0.1
 requests==2.32.3
-python-amazon-paapi==0.5.0
+python-amazon-paapi==5.0.1
 schedule==1.2.0
