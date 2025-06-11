@@ -3,7 +3,7 @@ import logging
 import time
 import schedule
 from dotenv import load_dotenv
-from amazon.paapi import AmazonAPI
+from python_amazon_paapi import AmazonAPI
 from telegram import Bot
 from telegram.error import TelegramError
 
