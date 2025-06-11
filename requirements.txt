@@ -5,3 +5,4 @@ gunicorn==21.2.0
 python-amazon-paapi==5.0.1
 schedule==1.2.0
 Flask
+boto3
